@@ -1,5 +1,3 @@
-// src/App.tsx
-
 import React from "react";
 import { User as FirebaseUser } from "firebase/auth";
 import { Authenticator, FirebaseCMSApp, buildCollection } from "@firecms/core";
@@ -17,9 +15,9 @@ import {
 import "typeface-rubik";
 import "@fontsource/ibm-plex-mono";
 
-// Tvoja Firebase konfiguracija (prilepi jo sem iz Firebase konzole)
+// Tvoja Firebase konfiguracija (iz tvoje slike)
 const firebaseConfig = {
-apiKey: "AIzaSyAbKVkXLDUbsx3RsjslmA8fwYL7WDqyoRKX2U",
+    apiKey: "AIzaSyAbKVkXLDUbsx3RsjslmA8fwYL7WDqyoRKX2U",
     authDomain: "wintoget.firebaseapp.com",
     projectId: "wintoget",
     storageBucket: "wintoget.appspot.com",
@@ -39,6 +37,7 @@ const predlogiNagradSponsorCollection = buildCollection({
         create: authController.extra?.isSponsor,
         delete: authController.extra?.isSponsor,
     }),
+    // Definicija polj za obrazec, ki ga izpolni sponzor
     properties: {
         imeNagrade: { name: "Ime Nagrade", dataType: "string", validation: { required: true } },
         opisNagrade: { name: "Opis Nagrade", dataType: "string", config: { multiline: true }, validation: { required: true } },
@@ -54,9 +53,21 @@ const predlogiNagradSponsorCollection = buildCollection({
                 ]
             }
         },
+        digitalniPodTip: {
+            name: "Vrsta digitalne nagrade",
+            description: "Izpolni samo, če je tip 'Digitalna nagrada'.",
+            dataType: "string",
+            config: {
+                enumValues: [
+                    { id: "koda_trgovca", label: "Koda (lasten sistem preverjanja)" },
+                    { id: "koda_wintoget_verifikacija", label: "Bon (WINT2GET verifikacija)" },
+                ]
+            }
+        },
         zaloga: { name: "Zaloga (kosov/kod)", dataType: "number", validation: { required: true, min: 0 } },
         vrednostNagradeEUR: { name: "Vrednost Nagrade (€)", dataType: "number", description: "Informativna vrednost v EUR. Končne točke določi administrator." },
-        statusPredloga: { name: "Status", dataType: "string", readOnly: true, defaultValue: "caka_na_odobritev" },
+        statusPredloga: { name: "Status Predloga", dataType: "string", readOnly: true, defaultValue: "caka_na_odobritev" },
+        // To polje se bo nastavilo samodejno in bo sponzorju skrito v obrazcu, ker je readOnly in ima defaultValue
         sponsorId: { dataType: "string", readOnly: true, defaultValue: ({ authController }) => authController.user.uid }
     }
 });
@@ -64,6 +75,7 @@ const predlogiNagradSponsorCollection = buildCollection({
 
 export default function App() {
 
+    // Kontroler za avtentikacijo in prepoznavanje vlog
     const myAuthController: Authenticator = {
         checkUser: (user: FirebaseUser | null) => {
             if (user) {
@@ -72,9 +84,9 @@ export default function App() {
                         const claims = idTokenResult.claims;
                         const isAdmin = claims.admin === true;
                         const isSponsor = claims.role === 'sponsor';
-
+                        
                         console.log("Preverjam vloge uporabnika:", { isAdmin, isSponsor });
-
+                        
                         return { isAdmin, isSponsor };
                     });
             }
@@ -86,8 +98,13 @@ export default function App() {
         <FirebaseCMSApp
             name={"WINTOGET Portal"}
             authentication={myAuthController}
+            signInOptions={[
+                "password", // Doda prijavo z emailom in geslom
+                "google.com"  // Obdrži tudi prijavo z Googlom (uporabno zate kot admina)
+            ]}
             navigation={({ user, authController }) => {
-
+                
+                // Meni za ADMINA
                 if (authController.extra?.isAdmin) {
                     return {
                         groups: [
@@ -111,22 +128,25 @@ export default function App() {
                         ]
                     };
                 } 
+                // Meni za SPONZORJA
                 else if (authController.extra?.isSponsor) {
                     return {
                         groups: [
                             {
                                 name: "Moj Portal",
                                 collections: [
+                                    // Sponzor vidi samo pogled za dodajanje in urejanje svojih predlogov
                                     predlogiNagradSponsorCollection
                                 ]
                             }
                         ]
                     };
                 }
-
+                
+                // Če uporabnik nima nobene vloge, ne vidi ničesar
                 return { groups: [] };
             }}
-
+            
             firebaseConfig={firebaseConfig}
         />
     );
