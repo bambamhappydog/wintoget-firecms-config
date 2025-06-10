@@ -15,7 +15,7 @@ import {
 import "typeface-rubik";
 import "@fontsource/ibm-plex-mono";
 
-// Tvoja Firebase konfiguracija (iz tvoje slike)
+// Tvoja pravilna Firebase konfiguracija iz slike
 const firebaseConfig = {
     apiKey: "AIzaSyAbKVkXLDUbsx3RsjslmA8fwYL7WDqyoRKX2U",
     authDomain: "wintoget.firebaseapp.com",
@@ -26,7 +26,7 @@ const firebaseConfig = {
     measurementId: "G-PPRZP6RQ58"
 };
 
-// Definicija za PREDLOGE NAGRAD, kot jo bo videl SPONZOR
+// Definicija, kako sponzor vidi obrazec za oddajo predlogov nagrad
 const predlogiNagradSponsorCollection = buildCollection({
     name: "Moji Predlogi Nagrad",
     path: "predlogiNagrad",
@@ -37,11 +37,10 @@ const predlogiNagradSponsorCollection = buildCollection({
         create: authController.extra?.isSponsor,
         delete: authController.extra?.isSponsor,
     }),
-    // Definicija polj za obrazec, ki ga izpolni sponzor
     properties: {
         imeNagrade: { name: "Ime Nagrade", dataType: "string", validation: { required: true } },
         opisNagrade: { name: "Opis Nagrade", dataType: "string", config: { multiline: true }, validation: { required: true } },
-        slikaNagrade: { name: "Slika Nagrade", dataType: "string", config: { storageMeta: { mediaType: "image", storagePath: "nagrade" } }, description: "Priporočeno razmerje 16:9.", validation: { required: true } },
+        slikaNagrade: { name: "Slika Nagrade", dataType: "string", config: { storageMeta: { mediaType: "image", storagePath: "nagrade_predlogi" } }, description: "Priporočeno razmerje 16:9.", validation: { required: true } },
         tipNagrade: {
             name: "Tip Nagrade",
             dataType: "string",
@@ -67,7 +66,6 @@ const predlogiNagradSponsorCollection = buildCollection({
         zaloga: { name: "Zaloga (kosov/kod)", dataType: "number", validation: { required: true, min: 0 } },
         vrednostNagradeEUR: { name: "Vrednost Nagrade (€)", dataType: "number", description: "Informativna vrednost v EUR. Končne točke določi administrator." },
         statusPredloga: { name: "Status Predloga", dataType: "string", readOnly: true, defaultValue: "caka_na_odobritev" },
-        // To polje se bo nastavilo samodejno in bo sponzorju skrito v obrazcu, ker je readOnly in ima defaultValue
         sponsorId: { dataType: "string", readOnly: true, defaultValue: ({ authController }) => authController.user.uid }
     }
 });
@@ -75,7 +73,6 @@ const predlogiNagradSponsorCollection = buildCollection({
 
 export default function App() {
 
-    // Kontroler za avtentikacijo in prepoznavanje vlog
     const myAuthController: Authenticator = {
         checkUser: (user: FirebaseUser | null) => {
             if (user) {
@@ -84,9 +81,7 @@ export default function App() {
                         const claims = idTokenResult.claims;
                         const isAdmin = claims.admin === true;
                         const isSponsor = claims.role === 'sponsor';
-                        
                         console.log("Preverjam vloge uporabnika:", { isAdmin, isSponsor });
-                        
                         return { isAdmin, isSponsor };
                     });
             }
@@ -99,12 +94,11 @@ export default function App() {
             name={"WINTOGET Portal"}
             authentication={myAuthController}
             signInOptions={[
-                "password", // Doda prijavo z emailom in geslom
-                "google.com"  // Obdrži tudi prijavo z Googlom (uporabno zate kot admina)
+                "password",
+                "google.com"
             ]}
             navigation={({ user, authController }) => {
                 
-                // Meni za ADMINA
                 if (authController.extra?.isAdmin) {
                     return {
                         groups: [
@@ -128,14 +122,12 @@ export default function App() {
                         ]
                     };
                 } 
-                // Meni za SPONZORJA
                 else if (authController.extra?.isSponsor) {
                     return {
                         groups: [
                             {
                                 name: "Moj Portal",
                                 collections: [
-                                    // Sponzor vidi samo pogled za dodajanje in urejanje svojih predlogov
                                     predlogiNagradSponsorCollection
                                 ]
                             }
@@ -143,7 +135,6 @@ export default function App() {
                     };
                 }
                 
-                // Če uporabnik nima nobene vloge, ne vidi ničesar
                 return { groups: [] };
             }}
             
